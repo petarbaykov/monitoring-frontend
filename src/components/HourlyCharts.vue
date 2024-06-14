@@ -1,76 +1,177 @@
 <template>
-  <div class="charts-container">
-    <h2>Hourly Metrics for Last 24 Hours</h2>
-    <div class="chart">
-      <h3>Status Codes Count</h3>
-      <line-chart :chart-data="statusCodeCountData"></line-chart>
-    </div>
-    <div class="chart">
-      <h3>Average Response Time</h3>
-      <line-chart :chart-data="averageResponseTimeData"></line-chart>
-    </div>
+  <div>
+    <canvas id="statusCodeChart"></canvas>
+    <canvas id="responseTimeChart"></canvas>
   </div>
 </template>
 
 <script>
-import { Line } from 'vue-chartjs';
-import { Chart as ChartJS, Title, Tooltip, Legend, LineElement, PointElement, LinearScale, CategoryScale } from 'chart.js';
-
-ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, LinearScale, CategoryScale);
+import { Chart } from 'chart.js';
 
 export default {
-  components: {
-    LineChart: Line
-  },
-  props: {
-    hourlyMetrics: {
-      type: Array,
-      required: true
+  props: ['hourlyMetrics'],
+  data() {
+    return {
+      statusCodeChart: null,
+      responseTimeChart: null,
     }
   },
-  computed: {
-    statusCodeCountData() {
-      const labels = this.hourlyMetrics.map(metric => metric.hour);
-      const data = this.hourlyMetrics.map(metric => metric.count);
+  watch: {
+    hourlyMetrics: {
+      handler() {
+        // this.renderStatusCodeChart();
+        // this.renderResponseTimeChart();
+      },
+      deep: true,
+      immediate: true
+    }
+  },
+  methods: {
+    renderStatusCodeChart() {
+      if (this.statusCodeChart) {
+        this.statusCodeChart.destroy();
+      }
 
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'Status Codes Count',
-            data,
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1
+      const groupedData = this.groupDataByStatusCode();
+      const labels = Object.keys(groupedData[Object.keys(groupedData)[0]]).sort();
+
+      const datasets = Object.keys(groupedData).map(statusCode => ({
+        label: `Status Code ${statusCode}`,
+        data: labels.map(label => groupedData[statusCode][label] || 0),
+        borderColor: this.getRandomColor(),
+        fill: false
+      }));
+
+      const ctx = document.getElementById('statusCodeChart').getContext('2d');
+      this.statusCodeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          title: {
+            display: true,
+            text: 'Hourly Status Codes'
+          },
+          scales: {
+            xAxes: [{
+              type: 'time',
+              time: {
+                unit: 'hour',
+                tooltipFormat: 'll HH:mm'
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Time'
+              }
+            }],
+            yAxes: [{
+              ticks: {
+                beginAtZero: true
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Count'
+              }
+            }]
           }
-        ]
-      };
+        }
+      });
     },
-    averageResponseTimeData() {
+    renderResponseTimeChart() {
+      if (this.responseTimeChart) {
+        this.responseTimeChart.destroy();
+      }
+
       const labels = this.hourlyMetrics.map(metric => metric.hour);
       const data = this.hourlyMetrics.map(metric => metric.averageResponseTime);
 
-      return {
-        labels,
-        datasets: [
-          {
+      const ctx = document.getElementById('responseTimeChart').getContext('2d');
+      this.responseTimeChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
             label: 'Average Response Time (ms)',
-            data,
-            borderColor: 'rgba(153, 102, 255, 1)',
-            borderWidth: 1
+            data: data,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            fill: false
+          }]
+        },
+        options: {
+          responsive: true,
+          title: {
+            display: true,
+            text: 'Hourly Average Response Time'
+          },
+          scales: {
+            xAxes: [{
+              type: 'time',
+              time: {
+                unit: 'hour',
+                tooltipFormat: 'll HH:mm'
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Time'
+              }
+            }],
+            yAxes: [{
+              ticks: {
+                beginAtZero: true
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Response Time (ms)'
+              }
+            }]
           }
-        ]
-      };
+        }
+      });
+    },
+    groupDataByStatusCode() {
+      const grouped = {};
+
+      this.hourlyMetrics.forEach(metric => {
+        const hour = metric.hour;
+        const statusCode = metric.statusCode;
+        if (!grouped[statusCode]) {
+          grouped[statusCode] = {};
+        }
+        grouped[statusCode][hour] = metric.count;
+      });
+
+      return grouped;
+    },
+    getRandomColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+  },
+  mounted() {
+    this.renderStatusCodeChart();
+    this.renderResponseTimeChart();
+  },
+  beforeDestroy() {
+    if (this.statusCodeChart) {
+      this.statusCodeChart.destroy();
+    }
+    if (this.responseTimeChart) {
+      this.responseTimeChart.destroy();
     }
   }
 };
 </script>
 
 <style scoped>
-.charts-container {
+canvas {
+  max-width: 100%;
   margin-top: 20px;
-}
-
-.chart {
-  margin-bottom: 40px;
 }
 </style>

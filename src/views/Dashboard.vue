@@ -36,8 +36,8 @@
           </div>
         </li>
       </ul>
-      <chart-component v-if="metrics" :response-time-data="responseTimeData" :status-code-data="statusCodeData"></chart-component>
-      <hourly-charts v-if="hourlyMetrics" :hourly-metrics="hourlyMetrics"></hourly-charts>
+      <!-- <chart-component v-if="metrics" :response-time-data="responseTimeData" :status-code-data="statusCodeData"></chart-component> -->
+      <hourly-charts v-if="hourlyMetrics" :key="selectedEndpointId" :hourly-metrics="hourlyMetrics"></hourly-charts>
     </div>
   </div>
 </template>
@@ -64,7 +64,8 @@ export default {
       editMode: false,
       error: '',
       metrics: null,
-      hourlyMetrics: null
+      hourlyMetrics: null,
+      selectedEndpointId: null,
     };
   },
   computed: {
@@ -127,11 +128,12 @@ export default {
       });
     },
     fetchMetrics(endpointId) {
-      this.$store.dispatch('fetchMetrics', endpointId).then(() => {
-        this.metrics = this.$store.state.metrics[endpointId];
-      }).catch(err => {
-        console.error(err);
-      });
+      // this.$store.dispatch('fetchMetrics', endpointId).then(() => {
+      //   this.metrics = this.$store.state.metrics[endpointId];
+      // }).catch(err => {
+      //   console.error(err);
+      // });
+      this.selectedEndpointId = endpointId;
       this.$store.dispatch('fetchHourlyMetrics', endpointId).then(() => {
         this.hourlyMetrics = this.$store.state.hourlyMetrics[endpointId];
       }).catch(err => {
@@ -164,6 +166,7 @@ export default {
   width: 80%;
   margin: auto;
   overflow: hidden;
+  color: #000;
 }
 
 .dashboard-container {
